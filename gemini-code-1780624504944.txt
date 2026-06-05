@@ -1,0 +1,29 @@
+# 1. Start from the official latest Bun image
+FROM oven/bun:latest
+
+# 2. Install Git and clean up package list lists
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
+# 3. Set the working directory
+WORKDIR /app
+
+# 4. Clone the original Interstellar-Astro code directly
+RUN git clone https://github.com/UseInterstellar/Interstellar-Astro.git .
+
+# 5. THE WORKAROUND DEPENDENCY STEP
+# We delete the problematic lockfiles entirely.
+# Then, we use npm (running in legacy mode to skip version conflict checks)
+# to install the node_modules structure instead of Bun.
+RUN rm -f bun.lockb bun.lock pnpm-lock.yaml package-lock.json && \
+    npm install --legacy-peer-deps --no-audit --no-fund
+
+# 6. BUN TAKES BACK CONTROL
+# Bun handles the production compilation of the Astro assets.
+RUN bun run build
+
+# 7. Port environment configuration flags for Koyeb
+EXPOSE 8080
+ENV PORT=8080
+
+# 8. Bun launches the proxy server runtime engine
+CMD ["bun", "start"]
